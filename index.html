@@ -62,7 +62,7 @@
 </head>
 <body class="bg-gray-50 flex flex-col items-center justify-center min-h-screen p-4">
 
-    <div class="w-full max-w-2xl bg-white p-8 md:p-12 rounded-3xl shadow-2xl space-y-8 flex flex-col items-center border border-gray-100">
+    <div class="w-full max-w-2xl bg-white p-4 sm:p-8 md:p-12 rounded-3xl shadow-2xl space-y-8 flex flex-col items-center border border-gray-100">
 
         <!-- Title and Description -->
         <div class="text-center space-y-2 fade-in">
@@ -111,7 +111,7 @@
 
         <!-- PNR Status Result Card -->
         <div id="resultsCard" class="hidden w-full slide-up">
-            <div class="bg-white/40 backdrop-blur-md p-6 md:p-8 rounded-2xl shadow-xl space-y-6 border border-white/20">
+            <div class="bg-white/40 backdrop-blur-md p-4 md:p-8 rounded-2xl shadow-xl space-y-6 border border-white/20">
                 <div class="flex justify-between items-center pb-4 border-b border-white/20">
                     <h2 class="text-2xl font-bold text-gray-800">Ticket Status</h2>
                     <span id="pnrStatusBadge" class="px-3 py-1 text-sm font-semibold rounded-full uppercase"></span>
@@ -170,11 +170,29 @@
                     </div>
                 </div>
 
-                <!-- Passenger Details -->
-                <div>
-                    <h3 class="text-xl font-bold text-indigo-600 mb-4">Passenger Details</h3>
-                    <div id="passengerList" class="space-y-4">
-                        <!-- Passenger details will be dynamically added here -->
+                <!-- Passenger Details Section -->
+                <div id="passengerDetailsSection">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-indigo-600">Passenger Status</h3>
+                        <div class="flex items-center space-x-2 text-sm text-gray-500">
+                            <span id="chartStatusText"></span>
+                            <i class="fas fa-sync-alt text-gray-400 hover:text-indigo-600 cursor-pointer transition-colors" onclick="refreshStatus()"></i>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg shadow-sm">
+                        <table class="min-w-full bg-white rounded-lg border border-gray-200 text-gray-700">
+                            <thead class="bg-gray-100">
+                                <tr class="text-left text-sm font-semibold text-gray-600">
+                                    <th class="py-3 px-4 rounded-tl-lg">S. No</th>
+                                    <th class="py-3 px-4">Current Status</th>
+                                    <th class="py-3 px-4">Booking Status</th>
+                                    <th class="py-3 px-4 rounded-tr-lg">Coach</th>
+                                </tr>
+                            </thead>
+                            <tbody id="passengerList" class="divide-y divide-gray-200">
+                                <!-- Passenger rows will be dynamically added here -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 
@@ -236,6 +254,7 @@
             const punctualityRatingElem = document.getElementById('punctualityRating');
             const cleanlinessRatingElem = document.getElementById('cleanlinessRating');
             const checkAnotherBtn = document.getElementById('checkAnotherBtn');
+            const chartStatusTextElem = document.getElementById('chartStatusText');
             
             // Event listener for form submission (handles both button click and Enter key)
             pnrForm.addEventListener('submit', async (event) => {
@@ -316,6 +335,10 @@
                 punctualityRatingElem.textContent = data.punctualityRating.toFixed(1);
                 cleanlinessRatingElem.textContent = data.cleanlinessRating.toFixed(1);
 
+                // Set chart status text
+                chartStatusTextElem.textContent = data.chartPrepared ? 'Chart prepared' : 'Chart not prepared';
+
+
                 // Get the overall PNR status from the first passenger's current status
                 const overallStatus = data.passengerStatus[0].currentStatusNew;
                 let badgeBg, badgeText;
@@ -342,13 +365,13 @@
                 // Clear previous passenger list
                 passengerListElem.innerHTML = '';
                 
-                // Loop through passengers and create a list
+                // Loop through passengers and create a table row for each
                 data.passengerStatus.forEach(p => {
-                    const passengerDiv = document.createElement('div');
-                    passengerDiv.classList.add('bg-white', 'p-4', 'rounded-lg', 'border', 'border-gray-200', 'shadow-sm', 'flex', 'items-center', 'justify-between');
+                    const row = document.createElement('tr');
+                    row.classList.add('hover:bg-gray-50', 'transition-colors');
                     
                     const currentStatusValue = p.currentStatusNew;
-                    const predictionValue = p.prediction || 'No Prediction';
+                    const predictionValue = p.prediction || '';
 
                     // Use regex to split the status and the waiting list number
                     const statusMatch = p.currentStatus.match(/^([a-zA-Z]+)\s*(\d*)$/);
@@ -358,38 +381,17 @@
                         statusPart = statusMatch[1];
                         numberPart = statusMatch[2];
                     }
-
-                    let statusColor, statusBg;
-                    if (currentStatusValue === 'CNF') {
-                        statusColor = 'text-green-600';
-                        statusBg = 'bg-green-100';
-                    } else if (currentStatusValue === 'RAC') {
-                        statusColor = 'text-yellow-600';
-                        statusBg = 'bg-yellow-100';
-                    } else {
-                        statusColor = 'text-red-600';
-                        statusBg = 'bg-red-100';
-                    }
                     
-                    passengerDiv.innerHTML = `
-                        <div class="flex items-center space-x-4">
-                            <i class="fas fa-user-circle text-2xl text-gray-400"></i>
-                            <div>
-                                <p class="font-bold text-gray-800">Passenger ${p.number}</p>
-                                <p class="text-sm text-gray-500">Booking Status: ${p.bookingStatus}</p>
-                                <div class="flex items-baseline space-x-1">
-                                  <p class="text-sm text-gray-500 font-semibold">Current Status:</p>
-                                  <p class="text-base text-gray-800 font-bold">${statusPart}</p>
-                                  ${numberPart ? `<p class="text-xl text-indigo-600 font-extrabold">${numberPart}</p>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <span class="px-3 py-1 text-xs font-semibold rounded-full uppercase ${statusBg} ${statusColor}">${currentStatusValue}</span>
-                            <p class="mt-1 text-xs font-medium text-gray-400">${predictionValue}</p>
-                        </div>
+                    row.innerHTML = `
+                        <td class="py-3 px-4 whitespace-nowrap text-sm font-medium text-gray-800">${p.number}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <p class="font-bold text-gray-800">${statusPart} ${numberPart}</p>
+                            ${predictionValue ? `<p class="text-xs text-green-600 font-medium">${predictionValue}</p>` : ''}
+                        </td>
+                        <td class="py-3 px-4 whitespace-nowrap text-sm text-gray-800">${p.bookingStatus}</td>
+                        <td class="py-3 px-4 whitespace-nowrap text-sm text-gray-500">${p.coach || '-'}</td>
                     `;
-                    passengerListElem.appendChild(passengerDiv);
+                    passengerListElem.appendChild(row);
                 });
 
                 // Show the results card with animation
