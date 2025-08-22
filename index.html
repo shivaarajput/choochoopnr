@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PNR Status Checker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Open Graph Meta Tags for Social Sharing -->
+    <meta property="og:title" content="PNR Status Checker">
+    <meta property="og:description" content="Instantly check your Indian Railways ticket PNR status with a clean, fast interface.">
+    <meta property="og:image" content="https://placehold.co/1200x630/4f46e5/ffffff?text=PNR+Status+Checker">
+    <meta property="og:url" content="#">
+    <meta property="og:type" content="website">
+
+    <style>
+        /* Custom CSS for animations and fonts */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out forwards;
+        }
+        .slide-up {
+            animation: slideUp 0.5s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        /* Spinner animation */
+        .spinner {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Hide element initially */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl bg-white p-8 md:p-12 rounded-3xl shadow-2xl space-y-8 flex flex-col items-center border border-gray-100">
+
+        <!-- Title and Description -->
+        <div class="text-center space-y-2 fade-in">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800">
+                <i class="fas fa-train text-indigo-600 mr-2"></i> PNR Status
+            </h1>
+            <p class="text-gray-500 text-lg">Check your Indian Railways ticket status instantly.</p>
+        </div>
+
+        <!-- PNR Input Form -->
+        <form id="pnrForm" class="w-full space-y-4 slide-up">
+            <div class="relative">
+                <input
+                    type="text"
+                    id="pnrInput"
+                    name="pnrNumber"
+                    maxlength="10"
+                    placeholder="Enter 10-digit PNR number"
+                    class="w-full px-5 py-4 text-center text-gray-800 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300 placeholder-gray-400 font-semibold text-lg hover:border-indigo-300"
+                    required
+                />
+            </div>
+            <button
+                type="submit"
+                class="w-full px-8 py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-300 transform active:scale-95"
+            >
+                Check Status
+            </button>
+        </form>
+
+        <!-- Loading Spinner and Message -->
+        <div id="loadingIndicator" class="hidden my-8 fade-in flex flex-col items-center space-y-4">
+            <div class="spinner w-12 h-12 border-4 border-gray-200 rounded-full border-t-indigo-500"></div>
+            <p class="text-gray-600 font-semibold">Checking PNR status...</p>
+        </div>
+
+        <!-- Error Message Box -->
+        <div id="errorBox" class="hidden w-full slide-up">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl relative shadow-md" role="alert">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle text-red-500 mr-4"></i>
+                    <span id="errorMessage" class="block sm:inline font-medium"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PNR Status Result Card -->
+        <div id="resultsCard" class="hidden w-full slide-up">
+            <div class="bg-white/40 backdrop-blur-md p-6 md:p-8 rounded-2xl shadow-xl space-y-6 border border-white/20">
+                <div class="flex justify-between items-center pb-4 border-b border-white/20">
+                    <h2 class="text-2xl font-bold text-gray-800">Ticket Status</h2>
+                    <span id="pnrStatusBadge" class="px-3 py-1 text-sm font-semibold rounded-full uppercase"></span>
+                </div>
+
+                <!-- Main Details Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6 text-gray-700">
+                    <!-- Train Name & Number -->
+                    <div class="space-y-1">
+                        <p class="text-sm font-medium text-gray-500">Train Name & Number</p>
+                        <p id="trainDetails" class="font-semibold text-lg"></p>
+                    </div>
+                    <!-- From & To Stations -->
+                    <div class="space-y-1">
+                        <p class="text-sm font-medium text-gray-500">From & To</p>
+                        <p id="fromTo" class="font-semibold text-lg"></p>
+                    </div>
+                    <!-- Date of Journey -->
+                    <div class="space-y-1">
+                        <p class="text-sm font-medium text-gray-500">Date of Journey</p>
+                        <p id="doj" class="font-semibold text-lg"></p>
+                    </div>
+                    <!-- Departure & Arrival Times -->
+                    <div class="space-y-1">
+                        <p class="text-sm font-medium text-gray-500">Departure & Arrival</p>
+                        <p id="timeDetails" class="font-semibold text-lg"></p>
+                    </div>
+                    <!-- Travel Class & Quota -->
+                    <div class="space-y-1">
+                        <p class="text-sm font-medium text-gray-500">Class & Quota</p>
+                        <p id="classQuota" class="font-semibold text-lg"></p>
+                    </div>
+                    <!-- Expected Platform -->
+                    <div class="space-y-1">
+                        <p class="text-sm font-medium text-gray-500">Platform No.</p>
+                        <p id="platformNo" class="font-semibold text-lg"></p>
+                    </div>
+                </div>
+
+                <!-- Train Amenities & Status -->
+                <div class="space-y-2">
+                    <h3 class="text-xl font-bold text-indigo-600">Train Status & Amenities</h3>
+                    <div class="flex flex-wrap items-center space-x-4 text-gray-700">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-utensils text-gray-500"></i>
+                            <p class="text-sm font-medium">Pantry Car: <span id="hasPantry" class="font-semibold"></span></p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-check-circle text-gray-500"></i>
+                            <p class="text-sm font-medium">Chart Prepared: <span id="chartPrepared" class="font-semibold"></span></p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                             <i class="fas fa-clock text-gray-500"></i>
+                             <p class="text-sm font-medium">Duration: <span id="duration" class="font-semibold"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passenger Details -->
+                <div>
+                    <h3 class="text-xl font-bold text-indigo-600 mb-4">Passenger Details</h3>
+                    <div id="passengerList" class="space-y-4">
+                        <!-- Passenger details will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Train Ratings -->
+                <div>
+                    <h3 class="text-xl font-bold text-indigo-600 mb-4">Train Ratings</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+                            <p class="text-sm font-medium text-gray-500">Overall</p>
+                            <p id="overallRating" class="text-2xl font-bold text-indigo-600 mt-1">--</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+                            <p class="text-sm font-medium text-gray-500">Punctuality</p>
+                            <p id="punctualityRating" class="text-2xl font-bold text-indigo-600 mt-1">--</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+                            <p id="cleanlinessLabel" class="text-sm font-medium text-gray-500">Cleanliness</p>
+                            <p id="cleanlinessRating" class="text-2xl font-bold text-indigo-600 mt-1">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Go Back Button -->
+                <div class="pt-6 border-t border-gray-200 text-center">
+                    <button id="checkAnotherBtn" class="px-8 py-3 bg-gray-200 text-gray-800 font-bold rounded-xl shadow-md hover:bg-gray-300 focus:outline-none transition-all duration-300 transform active:scale-95">
+                        Check Another PNR
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-sm text-gray-500">
+            Made with ❤️ by <a href="https://t.me/TheMoonlightPhoenix" target="_blank" class="underline hover:text-indigo-600 transition-colors">Shiva</a>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get references to all the HTML elements as soon as the DOM is loaded.
+            const pnrForm = document.getElementById('pnrForm');
+            const pnrInput = document.getElementById('pnrInput');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorBox = document.getElementById('errorBox');
+            const errorMessage = document.getElementById('errorMessage');
+            const resultsCard = document.getElementById('resultsCard');
+            const trainDetailsElem = document.getElementById('trainDetails');
+            const fromToElem = document.getElementById('fromTo');
+            const dojElem = document.getElementById('doj');
+            const passengerListElem = document.getElementById('passengerList');
+            const pnrStatusBadgeElem = document.getElementById('pnrStatusBadge');
+            const timeDetailsElem = document.getElementById('timeDetails');
+            const classQuotaElem = document.getElementById('classQuota');
+            const platformNoElem = document.getElementById('platformNo');
+            const hasPantryElem = document.getElementById('hasPantry');
+            const chartPreparedElem = document.getElementById('chartPrepared');
+            const durationElem = document.getElementById('duration');
+            const overallRatingElem = document.getElementById('overallRating');
+            const punctualityRatingElem = document.getElementById('punctualityRating');
+            const cleanlinessRatingElem = document.getElementById('cleanlinessRating');
+            const checkAnotherBtn = document.getElementById('checkAnotherBtn');
+            
+            // Event listener for form submission (handles both button click and Enter key)
+            pnrForm.addEventListener('submit', async (event) => {
+                // Prevent the default form submission behavior
+                event.preventDefault();
+
+                // Get the PNR number from the input field
+                const pnrNumber = pnrInput.value.trim();
+
+                // Validate the PNR number (simple check for 10 digits)
+                if (pnrNumber.length !== 10 || isNaN(pnrNumber)) {
+                    displayError('Please enter a valid 10-digit PNR number.');
+                    return;
+                }
+
+                // Hide previous results and error messages
+                resultsCard.classList.add('hidden');
+                errorBox.classList.add('hidden');
+                // Show the loading indicator
+                loadingIndicator.classList.remove('hidden');
+
+                try {
+                    // Call the API function to get PNR status
+                    const status = await fetchPnrStatus(pnrNumber);
+                    // Hide loading indicator
+                    loadingIndicator.classList.add('hidden');
+                    // Display the results
+                    displayPnrStatus(status);
+                } catch (error) {
+                    // Hide loading indicator
+                    loadingIndicator.classList.add('hidden');
+                    // Display the error message
+                    displayError(error.message);
+                }
+            });
+
+            // Event listener for the "Check Another PNR" button
+            checkAnotherBtn.addEventListener('click', () => {
+                resultsCard.classList.add('hidden');
+                pnrInput.value = ''; // Clear the input field
+                pnrForm.classList.remove('hidden');
+            });
+
+            /**
+             * Fetches PNR status from the API.
+             * @param {string} pnrNumber The PNR number to check.
+             * @returns {Promise<Object>} A promise that resolves with the PNR status object or rejects with an error.
+             */
+            const fetchPnrStatus = async (pnrNumber) => {
+                try {
+                  const response = await fetch(`/api/pnr?pnrNumber=${pnrNumber}`);
+                  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                  const data = await response.json();
+                  console.log("PNR Status:", data);
+                  return data;
+                } catch (err) {
+                  console.error("Error fetching PNR status:", err.message);
+                  throw err;
+                }
+            };
+
+            /**
+             * Displays the PNR status in the results card.
+             * @param {Object} data The PNR status data object.
+             */
+            const displayPnrStatus = (data) => {
+                // Populate the card with the received data
+                trainDetailsElem.textContent = `${data.trainName} (${data.trainNo})`;
+                fromToElem.textContent = `${data.sourceName} to ${data.destinationName}`;
+                dojElem.textContent = data.doj;
+                timeDetailsElem.textContent = `${data.departureTime} - ${data.arrivalTime}`;
+                classQuotaElem.textContent = `${data.class} (${data.quota})`;
+                platformNoElem.textContent = data.expectedPlatformNo;
+                hasPantryElem.textContent = data.hasPantry ? 'Yes' : 'No';
+                chartPreparedElem.textContent = data.chartPrepared ? 'Yes' : 'No';
+                durationElem.textContent = data.duration;
+                overallRatingElem.textContent = data.rating.toFixed(1);
+                punctualityRatingElem.textContent = data.punctualityRating.toFixed(1);
+                cleanlinessRatingElem.textContent = data.cleanlinessRating.toFixed(1);
+
+                // Get the overall PNR status from the first passenger's current status
+                const overallStatus = data.passengerStatus[0].currentStatusNew;
+                let badgeBg, badgeText;
+                switch(overallStatus.toUpperCase()) {
+                    case 'CNF':
+                        badgeBg = 'bg-green-100';
+                        badgeText = 'text-green-600';
+                        break;
+                    case 'RAC':
+                        badgeBg = 'bg-yellow-100';
+                        badgeText = 'text-yellow-600';
+                        break;
+                    case 'GNWL':
+                    case 'WL':
+                    default:
+                        badgeBg = 'bg-red-100';
+                        badgeText = 'text-red-600';
+                        break;
+                }
+                pnrStatusBadgeElem.className = `px-3 py-1 text-sm font-semibold rounded-full uppercase ${badgeBg} ${badgeText}`;
+                pnrStatusBadgeElem.textContent = overallStatus;
+
+
+                // Clear previous passenger list
+                passengerListElem.innerHTML = '';
+                
+                // Loop through passengers and create a list
+                data.passengerStatus.forEach(p => {
+                    const passengerDiv = document.createElement('div');
+                    passengerDiv.classList.add('bg-white', 'p-4', 'rounded-lg', 'border', 'border-gray-200', 'shadow-sm', 'flex', 'items-center', 'justify-between');
+                    
+                    const currentStatusValue = p.currentStatusNew;
+                    const predictionValue = p.prediction || 'No Prediction';
+
+                    // Use regex to split the status and the waiting list number
+                    const statusMatch = p.currentStatus.match(/^([a-zA-Z]+)\s*(\d*)$/);
+                    let statusPart = p.currentStatus;
+                    let numberPart = '';
+                    if (statusMatch) {
+                        statusPart = statusMatch[1];
+                        numberPart = statusMatch[2];
+                    }
+
+                    let statusColor, statusBg;
+                    if (currentStatusValue === 'CNF') {
+                        statusColor = 'text-green-600';
+                        statusBg = 'bg-green-100';
+                    } else if (currentStatusValue === 'RAC') {
+                        statusColor = 'text-yellow-600';
+                        statusBg = 'bg-yellow-100';
+                    } else {
+                        statusColor = 'text-red-600';
+                        statusBg = 'bg-red-100';
+                    }
+                    
+                    passengerDiv.innerHTML = `
+                        <div class="flex items-center space-x-4">
+                            <i class="fas fa-user-circle text-2xl text-gray-400"></i>
+                            <div>
+                                <p class="font-bold text-gray-800">Passenger ${p.number}</p>
+                                <p class="text-sm text-gray-500">Booking Status: ${p.bookingStatus}</p>
+                                <div class="flex items-baseline space-x-1">
+                                  <p class="text-sm text-gray-500 font-semibold">Current Status:</p>
+                                  <p class="text-base text-gray-800 font-bold">${statusPart}</p>
+                                  ${numberPart ? `<p class="text-xl text-indigo-600 font-extrabold">${numberPart}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-3 py-1 text-xs font-semibold rounded-full uppercase ${statusBg} ${statusColor}">${currentStatusValue}</span>
+                            <p class="mt-1 text-xs font-medium text-gray-400">${predictionValue}</p>
+                        </div>
+                    `;
+                    passengerListElem.appendChild(passengerDiv);
+                });
+
+                // Show the results card with animation
+                resultsCard.classList.remove('hidden');
+            };
+
+            /**
+             * Displays an error message in a styled alert box.
+             * @param {string} message The error message to display.
+             */
+            const displayError = (message) => {
+                errorMessage.textContent = message;
+                errorBox.classList.remove('hidden');
+            };
+        });
+    </script>
+</body>
+</html>
